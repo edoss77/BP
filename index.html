@@ -446,52 +446,57 @@ function printDoc() {
   setTimeout(function() { w.focus(); w.print(); }, 700);
 }
 
-function sendEmail() {
-  var res = buildLines(); var lines = res.lines; var total = res.total;
-  var pr = document.getElementById('f-prenom').value || '';
-  var nm = document.getElementById('f-nom').value || '';
-  var so = document.getElementById('f-societe').value || '';
-  var em = document.getElementById('f-email').value || '';
-  var now = new Date();
-  var dateStr = now.toLocaleDateString('fr-FR', {day:'2-digit', month:'long', year:'numeric'});
-  var ref = 'DEV-' + now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '-' + Math.floor(Math.random()*9000+1000);
-  var bl = billing === 'annual' ? 'Annuel (-15%)' : 'Trimestriel';
-  var to = 'hello@myvioo.community,pm@millesima-technologies.com,hdridi@millesima-experience.com';
-  var clientName = (so || (pr + ' ' + nm)).trim() || 'Client';
-  var subject = '[myvioo] Devis ' + ref + ' - ' + clientName;
-  var body = 'Bonjour,\n\n';
-  body += 'Veuillez trouver ci-dessous le devis configure via le configurateur myvioo.\n\n';
-  body += '------------------------------------------------------------\n';
-  body += 'DEVIS N : ' + ref + '\n';
-  body += 'Date : ' + dateStr + '\n';
-  body += 'Facturation : ' + bl + '\n';
-  body += '------------------------------------------------------------\n\n';
-  if (pr || nm || so || em) {
-    body += 'CLIENT\n';
-    if (pr || nm) body += 'Nom : ' + pr + ' ' + nm + '\n';
-    if (so) body += 'Societe : ' + so + '\n';
-    if (em) body += 'Email : ' + em + '\n';
-    body += '\n';
+async function sendEmail() {
+
+  const prenom = document.getElementById('f-prenom').value;
+  const nom = document.getElementById('f-nom').value;
+  const societe = document.getElementById('f-societe').value;
+  const email = document.getElementById('f-email').value;
+
+  const devisHTML = document.getElementById('modal-doc').innerHTML;
+
+  const totalElement = document.querySelector('.amount');
+
+  const total = totalElement
+    ? totalElement.innerText
+    : '';
+
+  try {
+
+    const response = await fetch('send-devis.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        prenom,
+        nom,
+        societe,
+        email,
+        devis: devisHTML,
+        total
+      })
+    });
+
+    const result = await response.json();
+
+    if(result.success) {
+
+      alert('Devis envoyé avec succès');
+
+    } else {
+
+      alert('Erreur : ' + result.message);
+
+    }
+
+  } catch(error) {
+
+    console.error(error);
+
+    alert('Erreur serveur');
+
   }
-  body += 'SERVICES SELECTIONNES\n';
-  body += '------------------------------------------------------------\n';
-  for (var i = 0; i < lines.length; i++) {
-    var l = lines[i];
-    var price = l.val !== null ? l.val.toFixed(2) + ' EUR/mois' : 'Sur demande';
-    body += '- ' + l.cat + ' / ' + l.tier + '\n';
-    body += '  Detail : ' + l.detail + '\n';
-    body += '  Montant : ' + price + '\n\n';
-  }
-  body += '------------------------------------------------------------\n';
-  body += 'TOTAL MENSUEL HT : ' + total.toFixed(2) + ' EUR\n';
-  if (billing === 'annual') body += '(Reduction annuelle de 15% appliquee)\n';
-  body += '------------------------------------------------------------\n\n';
-  body += 'Engagement minimum de 3 mois pour tous les forfaits.\n';
-  body += 'Tarifs en euros hors taxes.\n';
-  body += 'Majoration de 25% des revenus ADS sur les chaines selon conditions contractuelles.\n\n';
-  body += 'Ce devis est valable 30 jours a compter de sa date d emission.\n\n';
-  body += 'Cordialement,\nmyvioo\nhello@myvioo.community';
-  window.location.href = 'mailto:' + to + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
 }
 
 function resetAll() {
